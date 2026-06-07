@@ -1,36 +1,97 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Wordless
 
-## Getting Started
+A Wordle-style word puzzle. Guess the hidden 5-letter word in 6 tries.
 
-First, run the development server:
+## Features
+
+- Daily word shuffles at **3:00 AM GMT+7**
+- Physical keyboard + on-screen keyboard
+- Progress saved in localStorage
+- Share results as emoji grid
+
+## Getting started
+
+Requires [Bun](https://bun.sh).
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
+bun install
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Command | Description |
+|---------|-------------|
+| `bun dev` | Start dev server |
+| `bun run build` | Production build |
+| `bun start` | Run production server |
+| `bun run lint` | Run ESLint |
+| `bun run typecheck` | TypeScript check |
 
-## Learn More
+## CI/CD & GitOps
 
-To learn more about Next.js, take a look at the following resources:
+```
+PR → lint + typecheck + build
+main → Docker build → push aeonamind/lessgames:<sha> → update gitops repo → Argo CD sync
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### GitHub secrets required
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Secret | Purpose |
+|--------|---------|
+| `DOCKER_USERNAME` | DockerHub login |
+| `DOCKER_PASSWORD` | DockerHub token |
+| `GITOPS_TOKEN` | PAT to push image tag updates to `aeonamind/gitops` |
 
-## Deploy on Vercel
+### GitOps (Argo CD)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Helm chart lives in the [gitops](https://github.com/aeonamind/gitops) repo:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `infra/lessgames/` — Deployment, Service, Ingress
+- `apps/lessgames/application.yaml` — Argo CD Application (picked up by root app)
+
+Ingress host defaults to `lessgames.eugenebox.uk` — edit `infra/lessgames/values.yaml` to change.
+
+### Local Docker
+
+```bash
+docker build -t lessgames:local .
+docker run --rm -p 3000:3000 lessgames:local
+```
+
+## Project structure
+
+```
+src/
+  app/                    Next.js routes (one folder per game)
+    page.tsx              Game hub
+    wordless/
+    clueless/
+    songless/
+  games/
+    registry.ts           Central game catalog
+    wordless/             Wordless game module
+      components/
+      lib/
+      data/
+    clueless/             Placeholder for future game
+    songless/
+  shared/                 Cross-game utilities
+    config/               Site-wide settings (timezone, etc.)
+    lib/                  Daily shuffle, storage helpers
+    components/           Shared UI (countdown, shell, etc.)
+```
+
+## Adding a new game
+
+1. Create `src/games/<slug>/` with `config.ts`, components, and lib.
+2. Register it in `src/games/registry.ts`.
+3. Add a route at `src/app/<slug>/page.tsx`.
+
+All games share the daily shuffle schedule via `src/shared/lib/daily.ts`.
+
+## Daily shuffle
+
+The game day rolls over at 03:00 GMT+7 (not midnight UTC). Each game uses a unique salt so daily picks differ across games on the same day.

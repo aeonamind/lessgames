@@ -1,0 +1,1 @@
+export { songlessConfig } from "./config";
