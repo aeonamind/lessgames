@@ -12,7 +12,7 @@ export const wordlessConfig = {
   shareTitle: "Wordless",
   nextShuffleLabel: "Next shuffle in",
   footer:
-    "Six daily words (3–8 letters). Valid English words verified online. New shuffle at 3:00 AM GMT+7.",
+    "Six daily words (3–8 letters). Common English words from Datamuse; guesses checked against a dictionary. New shuffle at 3:00 AM GMT+7.",
 } as const satisfies Pick<GameDefinition, "id" | "slug" | "name"> & {
   minLength: number;
   maxLength: number;

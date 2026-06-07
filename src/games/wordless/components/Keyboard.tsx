@@ -10,7 +10,7 @@ const ROWS = [
 
 function keyClasses(state: KeyState, isWide: boolean): string {
   const base =
-    "flex h-[52px] items-center justify-center rounded-md font-semibold uppercase select-none border transition-colors duration-150 active:scale-95 disabled:opacity-50";
+    "flex h-[52px] items-center justify-center rounded-md font-semibold uppercase select-none border transition-colors duration-150 active:scale-95 disabled:pointer-events-none";
 
   const size = isWide
     ? "px-2 text-[10px] sm:px-3 sm:text-xs flex-[1.4]"
@@ -22,7 +22,7 @@ function keyClasses(state: KeyState, isWide: boolean): string {
       : state === "present"
         ? "border-transparent bg-[var(--tile-present)] text-white"
         : state === "absent"
-          ? "border-transparent bg-[var(--tile-absent)] text-white"
+          ? "border-transparent bg-[var(--key-absent)] text-[var(--key-absent-text)]"
           : "border-[var(--site-border)] bg-[var(--key-unused)] text-[var(--key-text)] hover:bg-[var(--key-unused-hover)]";
 
   return `${base} ${size} ${tone}`;

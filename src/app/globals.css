@@ -29,6 +29,8 @@
   --tile-text-revealed: #ffffff;
   --key-unused: #f6f8fa;
   --key-unused-hover: #eaeef2;
+  --key-absent: #656d76;
+  --key-absent-text: #ffffff;
   --key-text: #1f2328;
 
   --background: var(--site-canvas-subtle);
@@ -60,8 +62,10 @@
   --tile-filled-border: #9198a1;
   --tile-text: #f0f6fc;
   --tile-text-revealed: #ffffff;
-  --key-unused: #21262d;
-  --key-unused-hover: #30363d;
+  --key-unused: #3d444d;
+  --key-unused-hover: #484f58;
+  --key-absent: #21262d;
+  --key-absent-text: #9198a1;
   --key-text: #f0f6fc;
 }
 

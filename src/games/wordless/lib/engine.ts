@@ -87,9 +87,10 @@ function updateKeyStates(
         : tileState === "present"
           ? "present"
           : "absent";
-    const existing = next[letter] ?? "unused";
+    const key = letter.toUpperCase();
+    const existing = next[key] ?? "unused";
     if (priority[keyState] > priority[existing]) {
-      next[letter] = keyState;
+      next[key] = keyState;
     }
   });
 
@@ -119,7 +120,8 @@ export function restorePuzzleState(
   answer: string,
 ): WordlessState {
   let keyStates: Record<string, KeyState> = {};
-  const guesses: GuessRow[] = saved.guesses.map((word) => {
+  const guesses: GuessRow[] = saved.guesses.map((rawWord) => {
+    const word = rawWord.toUpperCase();
     keyStates = updateKeyStates(keyStates, word, answer, length);
     return { word, tiles: tilesFromGuess(word, answer, length) };
   });

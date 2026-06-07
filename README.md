@@ -5,7 +5,7 @@ A Wordle-style word puzzle. Guess the hidden 5-letter word in 6 tries.
 ## Features
 
 - Six daily puzzles (3, 4, 5, 6, 7, and 8 letters)
-- Words fetched from online APIs (Datamuse + Random Word API)
+- Daily answers drawn from common words on Datamuse (frequency-filtered)
 - Guesses validated via Free Dictionary API
 
 ## Getting started

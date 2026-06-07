@@ -3,6 +3,9 @@ import { wordlessConfig } from "@/games/wordless/config";
 
 const { dailySalt, minLength, maxLength } = wordlessConfig;
 
+/** Datamuse corpus frequency; filters obscure words like "nek" (0.1). */
+const MIN_WORD_FREQUENCY = 1;
+
 type PoolCache = {
   gameDay: string;
   words: string[];
@@ -15,10 +18,22 @@ function isAlphaWord(word: string, length: number): boolean {
   return word.length === length && /^[a-zA-Z]+$/.test(word);
 }
 
+type DatamuseEntry = {
+  word: string;
+  tags?: string[];
+};
+
+function parseFrequency(tags: string[] | undefined): number | null {
+  const tag = tags?.find((entry) => entry.startsWith("f:"));
+  if (!tag) return null;
+  const value = Number(tag.slice(2));
+  return Number.isFinite(value) ? value : null;
+}
+
 async function fetchFromDatamuse(length: number): Promise<string[]> {
   const pattern = "?".repeat(length);
   const response = await fetch(
-    `https://api.datamuse.com/words?sp=${pattern}&max=1000`,
+    `https://api.datamuse.com/words?sp=${pattern}&max=1000&md=f`,
     { next: { revalidate: 86_400 } },
   );
 
@@ -26,36 +41,23 @@ async function fetchFromDatamuse(length: number): Promise<string[]> {
     throw new Error(`Datamuse request failed (${response.status})`);
   }
 
-  const data = (await response.json()) as { word: string }[];
+  const data = (await response.json()) as DatamuseEntry[];
   return data
-    .map((entry) => entry.word.trim())
-    .filter((word) => isAlphaWord(word, length))
-    .map((word) => word.toUpperCase());
-}
-
-async function fetchFromRandomWordApi(length: number): Promise<string[]> {
-  const response = await fetch(
-    `https://random-word-api.herokuapp.com/word?length=${length}&number=300`,
-    { next: { revalidate: 86_400 } },
-  );
-
-  if (!response.ok) {
-    return [];
-  }
-
-  const data = (await response.json()) as string[];
-  return data
-    .filter((word) => isAlphaWord(word, length))
-    .map((word) => word.toUpperCase());
+    .filter((entry) => {
+      const word = entry.word.trim();
+      const frequency = parseFrequency(entry.tags);
+      return (
+        isAlphaWord(word, length) &&
+        frequency !== null &&
+        frequency >= MIN_WORD_FREQUENCY
+      );
+    })
+    .map((entry) => entry.word.trim().toUpperCase());
 }
 
 async function buildWordPool(length: number): Promise<string[]> {
-  const [datamuseWords, randomWords] = await Promise.all([
-    fetchFromDatamuse(length),
-    fetchFromRandomWordApi(length),
-  ]);
-
-  return [...new Set([...datamuseWords, ...randomWords])];
+  const words = await fetchFromDatamuse(length);
+  return [...new Set(words)].sort();
 }
 
 export async function getWordPool(
@@ -85,8 +87,16 @@ export async function getDailyWord(
   gameDay = getGameDay(),
 ): Promise<string> {
   const pool = await getWordPool(length, gameDay);
-  const index = getDailyIndex(gameDay, pool.length, `${dailySalt}:${length}`);
-  return pool[index];
+  const start = getDailyIndex(gameDay, pool.length, `${dailySalt}:${length}`);
+
+  for (let offset = 0; offset < pool.length; offset++) {
+    const word = pool[(start + offset) % pool.length];
+    if (await validateEnglishWord(word)) {
+      return word;
+    }
+  }
+
+  throw new Error(`No dictionary-valid words found for length ${length}`);
 }
 
 export async function getDailyWords(gameDay = getGameDay()) {
