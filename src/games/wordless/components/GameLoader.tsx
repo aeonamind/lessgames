@@ -11,7 +11,7 @@ export const WordlessGameLoader = dynamic(
     ssr: false,
     loading: () => (
       <div className="flex flex-1 items-center justify-center py-24">
-        <p className="text-zinc-500">Loading...</p>
+        <div className="h-9 w-9 animate-spin rounded-full border-2 border-site-border border-t-site-accent" />
       </div>
     ),
   },

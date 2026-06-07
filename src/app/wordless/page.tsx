@@ -5,7 +5,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Wordless",
   description:
-    "Guess the hidden 5-letter word in 6 tries. A new word every day at 3:00 AM GMT+7.",
+    "Six daily word puzzles from 3 to 8 letters. Valid English words, new shuffle at 3:00 AM GMT+7.",
 };
 
 export default function WordlessPage() {

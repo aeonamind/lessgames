@@ -9,10 +9,12 @@ import { useEffect, useState } from "react";
 
 interface DailyCountdownProps {
   nextLabel?: string;
+  className?: string;
 }
 
 export function DailyCountdown({
   nextLabel = "Next puzzle in",
+  className = "",
 }: DailyCountdownProps) {
   const [countdown, setCountdown] = useState("");
   const [gameDay, setGameDay] = useState("");
@@ -39,9 +41,11 @@ export function DailyCountdown({
   }, []);
 
   return (
-    <div className="text-center text-sm text-zinc-500 dark:text-zinc-400">
-      <p>Puzzle #{gameDay.replace(/-/g, "")}</p>
-      <p>
+    <div className={`text-center text-sm ${className}`}>
+      <p className="font-medium text-site-text">
+        Puzzle #{gameDay.replace(/-/g, "")}
+      </p>
+      <p className="text-site-muted">
         {nextLabel} {countdown}
       </p>
     </div>

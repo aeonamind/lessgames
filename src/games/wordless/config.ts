@@ -4,18 +4,19 @@ export const wordlessConfig = {
   id: "wordless",
   slug: "wordless",
   name: "Wordless",
-  wordLength: 5,
+  minLength: 3,
+  maxLength: 8,
+  dailyLengths: [3, 4, 5, 6, 7, 8],
   maxGuesses: 6,
   dailySalt: "wordless",
   shareTitle: "Wordless",
-  nextShuffleLabel: "Next word in",
+  nextShuffleLabel: "Next shuffle in",
   footer:
-    "Guess the 5-letter word in 6 tries. A new word shuffles daily at 3:00 AM GMT+7.",
-} as const satisfies Pick<
-  GameDefinition,
-  "id" | "slug" | "name"
-> & {
-  wordLength: number;
+    "Six daily words (3–8 letters). Valid English words verified online. New shuffle at 3:00 AM GMT+7.",
+} as const satisfies Pick<GameDefinition, "id" | "slug" | "name"> & {
+  minLength: number;
+  maxLength: number;
+  dailyLengths: readonly number[];
   maxGuesses: number;
   dailySalt: string;
   shareTitle: string;
@@ -23,12 +24,11 @@ export const wordlessConfig = {
   footer: string;
 };
 
-export const TILE_COLORS = {
-  correct: "#6aaa64",
-  present: "#c9b458",
-  absent: "#787c7e",
-  empty: "#ffffff",
-  filled: "#ffffff",
-  border: "#d3d6da",
-  borderFilled: "#878a8c",
+export const TILE_THEME = {
+  correct: "var(--wordless-correct)",
+  present: "var(--wordless-present)",
+  absent: "var(--wordless-absent)",
+  filled: "var(--wordless-filled)",
+  empty: "var(--wordless-empty)",
+  border: "var(--wordless-border)",
 } as const;

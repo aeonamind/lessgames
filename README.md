@@ -4,10 +4,9 @@ A Wordle-style word puzzle. Guess the hidden 5-letter word in 6 tries.
 
 ## Features
 
-- Daily word shuffles at **3:00 AM GMT+7**
-- Physical keyboard + on-screen keyboard
-- Progress saved in localStorage
-- Share results as emoji grid
+- Six daily puzzles (3, 4, 5, 6, 7, and 8 letters)
+- Words fetched from online APIs (Datamuse + Random Word API)
+- Guesses validated via Free Dictionary API
 
 ## Getting started
 

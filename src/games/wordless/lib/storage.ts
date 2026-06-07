@@ -1,5 +1,5 @@
 import { createGameStorage } from "@/shared/lib/storage";
-import type { SavedWordlessGame } from "./types";
+import type { SavedWordlessSession } from "./types";
 
 export const wordlessStorage =
-  createGameStorage<SavedWordlessGame>("wordless");
+  createGameStorage<SavedWordlessSession>("wordless");

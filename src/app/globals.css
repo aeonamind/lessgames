@@ -1,27 +1,52 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #1a1a1b;
+  --site-bg: #f3f0e8;
+  --site-bg-accent: #e8e4d9;
+  --site-surface: #ffffff;
+  --site-surface-muted: #faf8f4;
+  --site-border: #ddd8cc;
+  --site-text: #1c1917;
+  --site-text-muted: #6b6560;
+  --site-accent: #0f766e;
+  --site-accent-soft: #ccfbf1;
+  --site-accent-hover: #115e59;
+
+  --tile-correct: #6aaa64;
+  --tile-present: #c9b458;
+  --tile-absent: #787c7e;
+  --tile-empty: #ffffff;
+  --tile-border: #d3d6da;
+  --tile-filled-border: #878a8c;
+
+  --background: var(--site-bg);
+  --foreground: var(--site-text);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-site-bg: var(--site-bg);
+  --color-site-surface: var(--site-surface);
+  --color-site-border: var(--site-border);
+  --color-site-text: var(--site-text);
+  --color-site-muted: var(--site-text-muted);
+  --color-site-accent: var(--site-accent);
+  --color-site-accent-soft: var(--site-accent-soft);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #09090b;
-    --foreground: #fafafa;
-  }
+body {
+  background: var(--site-bg);
+  color: var(--site-text);
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
+.site-shell {
+  background:
+    radial-gradient(ellipse at 20% 0%, rgba(15, 118, 110, 0.07), transparent 45%),
+    radial-gradient(ellipse at 80% 100%, rgba(120, 113, 108, 0.06), transparent 40%),
+    var(--site-bg);
 }
 
 @keyframes pop {
@@ -77,4 +102,5 @@ body {
 
 .animate-flip {
   animation: flip 0.5s ease-in-out forwards;
+  transform-style: preserve-3d;
 }

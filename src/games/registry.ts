@@ -14,7 +14,7 @@ export const GAMES: GameDefinition[] = [
     id: "wordless",
     slug: "wordless",
     name: "Wordless",
-    description: "Guess the 5-letter word in 6 tries.",
+    description: "Six daily words from 3 to 8 letters.",
     href: "/wordless",
     status: "live",
   },

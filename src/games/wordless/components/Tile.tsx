@@ -1,45 +1,46 @@
 "use client";
 
-import { TILE_COLORS } from "@/games/wordless/config";
 import type { Tile } from "@/games/wordless/lib/types";
 
 interface TileProps {
   tile: Tile;
+  wordLength: number;
   animate?: boolean;
   delay?: number;
 }
 
-export function TileCell({ tile, animate = false, delay = 0 }: TileProps) {
+function tileSizeClass(wordLength: number): string {
+  if (wordLength <= 4) return "h-14 w-14 text-2xl sm:h-16 sm:w-16 sm:text-3xl";
+  if (wordLength <= 6) return "h-12 w-12 text-xl sm:h-14 sm:w-14 sm:text-2xl";
+  return "h-10 w-10 text-lg sm:h-11 sm:w-11 sm:text-xl";
+}
+
+export function TileCell({
+  tile,
+  wordLength,
+  animate = false,
+  delay = 0,
+}: TileProps) {
   const isRevealed =
     tile.state === "correct" ||
     tile.state === "present" ||
     tile.state === "absent";
 
-  const bg =
+  const stateClass =
     tile.state === "correct"
-      ? TILE_COLORS.correct
+      ? "border-transparent bg-[var(--tile-correct)] text-white"
       : tile.state === "present"
-        ? TILE_COLORS.present
+        ? "border-transparent bg-[var(--tile-present)] text-white"
         : tile.state === "absent"
-          ? TILE_COLORS.absent
+          ? "border-transparent bg-[var(--tile-absent)] text-white"
           : tile.letter
-            ? TILE_COLORS.filled
-            : TILE_COLORS.empty;
-
-  const borderColor =
-    isRevealed || tile.letter ? "transparent" : TILE_COLORS.border;
-
-  const textColor = isRevealed ? "#ffffff" : "#1a1a1b";
+            ? "border-[var(--tile-filled-border)] bg-[var(--tile-empty)] text-site-text"
+            : "border-[var(--tile-border)] bg-[var(--tile-empty)] text-site-text";
 
   return (
     <div
-      className={`flex h-[62px] w-[62px] items-center justify-center border-2 text-[2rem] font-bold uppercase select-none sm:h-[58px] sm:w-[58px] ${animate ? "animate-flip" : tile.letter && !isRevealed ? "animate-pop" : ""}`}
-      style={{
-        backgroundColor: bg,
-        borderColor,
-        color: textColor,
-        animationDelay: animate ? `${delay}ms` : undefined,
-      }}
+      className={`flex items-center justify-center rounded-md border-2 font-bold uppercase select-none transition-colors duration-200 ${tileSizeClass(wordLength)} ${stateClass} ${animate ? "animate-flip" : tile.letter && !isRevealed ? "animate-pop" : ""}`}
+      style={{ animationDelay: animate ? `${delay}ms` : undefined }}
     >
       {tile.letter}
     </div>

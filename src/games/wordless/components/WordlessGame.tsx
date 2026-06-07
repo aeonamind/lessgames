@@ -1,15 +1,15 @@
 "use client";
 
+import { fetchDailyWords, validateWord } from "@/games/wordless/lib/api";
 import { wordlessConfig } from "@/games/wordless/config";
 import {
   addLetter,
+  buildSessionFromDailyWords,
   buildShareText,
-  createInitialGame,
   getBoardRows,
   removeLetter,
-  restoreGame,
   submitGuess,
-  toSavedGame,
+  toSavedSession,
 } from "@/games/wordless/lib/engine";
 import { wordlessStorage } from "@/games/wordless/lib/storage";
 import type { WordlessState } from "@/games/wordless/lib/types";
@@ -19,30 +19,86 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Board } from "./Board";
 import { Keyboard } from "./Keyboard";
-
-function loadInitialGame(): WordlessState {
-  const saved = wordlessStorage.load();
-  return saved ? restoreGame(saved) : createInitialGame();
-}
+import { LengthPicker } from "./LengthPicker";
 
 export function WordlessGame() {
-  const [state, setState] = useState<WordlessState>(loadInitialGame);
+  const [puzzles, setPuzzles] = useState<Record<number, WordlessState> | null>(
+    null,
+  );
+  const [activeLength, setActiveLength] = useState<number>(
+    wordlessConfig.dailyLengths[2],
+  );
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [shakeRow, setShakeRow] = useState<number | undefined>();
   const [revealRow, setRevealRow] = useState<number | undefined>();
   const [copied, setCopied] = useState(false);
+  const [validating, setValidating] = useState(false);
+
+  const loadDaily = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const daily = await fetchDailyWords();
+      const saved = wordlessStorage.load();
+      const session = buildSessionFromDailyWords(
+        daily.words,
+        daily.gameDay,
+        saved,
+      );
+      setPuzzles(session.puzzles);
+      setActiveLength(session.activeLength);
+    } catch {
+      setError("Could not load today's words. Check your connection and retry.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    wordlessStorage.save(toSavedGame(state));
-  }, [state]);
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const daily = await fetchDailyWords();
+        if (cancelled) return;
+
+        const saved = wordlessStorage.load();
+        const session = buildSessionFromDailyWords(
+          daily.words,
+          daily.gameDay,
+          saved,
+        );
+        setPuzzles(session.puzzles);
+        setActiveLength(session.activeLength);
+      } catch {
+        if (!cancelled) {
+          setError(
+            "Could not load today's words. Check your connection and retry.",
+          );
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!puzzles) return;
+    wordlessStorage.save(toSavedSession(puzzles, activeLength));
+  }, [puzzles, activeLength]);
 
   useEffect(() => {
     const checkDayRollover = () => {
-      setState((current) => {
-        const today = getGameDay();
-        if (current.gameDay === today) return current;
-        return createInitialGame();
-      });
+      const today = getGameDay();
+      if (puzzles && Object.values(puzzles)[0]?.gameDay === today) return;
+      loadDaily();
     };
 
     const onVisibility = () => {
@@ -56,46 +112,80 @@ export function WordlessGame() {
       document.removeEventListener("visibilitychange", onVisibility);
       clearInterval(id);
     };
-  }, []);
+  }, [puzzles, loadDaily]);
 
   const showMessage = useCallback((text: string) => {
     setMessage(text);
-    window.setTimeout(() => setMessage(null), 1500);
+    window.setTimeout(() => setMessage(null), 1800);
   }, []);
 
+  const updateActivePuzzle = useCallback(
+    (updater: (current: WordlessState) => WordlessState) => {
+      setPuzzles((current) => {
+        if (!current) return current;
+        return {
+          ...current,
+          [activeLength]: updater(current[activeLength]),
+        };
+      });
+    },
+    [activeLength],
+  );
+
   const handleKey = useCallback(
-    (key: string) => {
-      if (state.status !== "playing") return;
+    async (key: string) => {
+      if (!puzzles) return;
+      const state = puzzles[activeLength];
+      if (state.status !== "playing" || validating) return;
 
       if (key === "Enter") {
-        const result = submitGuess(state);
-        if (!result.ok) {
-          if (result.error === "incomplete") showMessage("Not enough letters");
-          if (result.error === "invalid") {
-            showMessage("Not in word list");
-            setShakeRow(state.guesses.length);
-            window.setTimeout(() => setShakeRow(undefined), 600);
-          }
+        if (state.currentGuess.length !== state.length) {
+          showMessage("Not enough letters");
           return;
         }
+
+        setValidating(true);
+        const isValid = await validateWord(state.currentGuess, state.length);
+        setValidating(false);
+
+        if (!isValid) {
+          showMessage("Not a valid English word");
+          setShakeRow(state.guesses.length);
+          window.setTimeout(() => setShakeRow(undefined), 600);
+          return;
+        }
+
+        const result = submitGuess(state);
+        if (!result.ok) return;
 
         const rowIndex = result.state.guesses.length - 1;
         setRevealRow(rowIndex);
         window.setTimeout(() => setRevealRow(undefined), 1800);
-        setState(result.state);
+
+        setPuzzles((current) =>
+          current
+            ? { ...current, [activeLength]: result.state }
+            : current,
+        );
         return;
       }
 
       if (key === "Backspace") {
-        setState(removeLetter(state));
+        updateActivePuzzle(removeLetter);
         return;
       }
 
       if (/^[A-Z]$/.test(key)) {
-        setState(addLetter(state, key));
+        updateActivePuzzle((current) => addLetter(current, key));
       }
     },
-    [state, showMessage],
+    [
+      puzzles,
+      activeLength,
+      validating,
+      showMessage,
+      updateActivePuzzle,
+    ],
   );
 
   useEffect(() => {
@@ -104,13 +194,13 @@ export function WordlessGame() {
 
       if (e.key === "Enter") {
         e.preventDefault();
-        handleKey("Enter");
+        void handleKey("Enter");
       } else if (e.key === "Backspace") {
         e.preventDefault();
-        handleKey("Backspace");
+        void handleKey("Backspace");
       } else if (/^[a-zA-Z]$/.test(e.key)) {
         e.preventDefault();
-        handleKey(e.key.toUpperCase());
+        void handleKey(e.key.toUpperCase());
       }
     };
 
@@ -119,7 +209,8 @@ export function WordlessGame() {
   }, [handleKey]);
 
   const handleShare = async () => {
-    const text = buildShareText(state);
+    if (!puzzles) return;
+    const text = buildShareText(puzzles[activeLength]);
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
@@ -129,59 +220,123 @@ export function WordlessGame() {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-4 py-24">
+        <div className="h-9 w-9 animate-spin rounded-full border-2 border-site-border border-t-site-accent" />
+        <p className="text-sm text-site-muted">Loading today&apos;s words…</p>
+      </div>
+    );
+  }
+
+  if (error || !puzzles) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 py-24 text-center">
+        <p className="text-site-text">{error ?? "Something went wrong."}</p>
+        <button
+          type="button"
+          onClick={loadDaily}
+          className="rounded-lg bg-site-accent px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-site-accent-hover"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  const state = puzzles[activeLength];
   const rows = getBoardRows(state);
   const finished = state.status !== "playing";
+  const completedCount = wordlessConfig.dailyLengths.filter(
+    (length) => puzzles[length].status === "won",
+  ).length;
 
   return (
-    <div className="flex w-full max-w-lg flex-col items-center gap-6 px-4 py-6">
-      <header className="relative flex w-full items-center justify-center">
-        <h1 className="text-[2rem] font-bold tracking-[0.2em]">WORDLESS</h1>
+    <div className="flex w-full max-w-2xl flex-col items-center gap-6 px-4 py-8">
+      <header className="flex w-full flex-col items-center gap-2 text-center">
+        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-site-accent">
+          Daily puzzles
+        </p>
+        <h1 className="text-4xl font-bold tracking-tight text-site-text sm:text-5xl">
+          Wordless
+        </h1>
+        <p className="text-sm text-site-muted">
+          {completedCount}/{wordlessConfig.dailyLengths.length} solved today
+        </p>
         {message && (
-          <div className="absolute top-full mt-2 rounded bg-zinc-900 px-4 py-2 text-sm font-semibold text-white dark:bg-zinc-100 dark:text-zinc-900">
+          <div className="mt-2 rounded-lg border border-site-border bg-site-surface px-4 py-2 text-sm font-medium text-site-text shadow-sm">
             {message}
           </div>
         )}
       </header>
 
-      <DailyCountdown nextLabel={wordlessConfig.nextShuffleLabel} />
+      <div className="w-full space-y-4">
+        <LengthPicker
+          lengths={wordlessConfig.dailyLengths}
+          activeLength={activeLength}
+          puzzles={puzzles}
+          onSelect={setActiveLength}
+        />
 
-      <Board rows={rows} shakeRow={shakeRow} revealRow={revealRow} />
+        <div className="rounded-2xl border border-site-border bg-site-surface px-4 py-3 shadow-sm">
+          <DailyCountdown nextLabel={wordlessConfig.nextShuffleLabel} />
+          <p className="mt-1 text-center text-xs text-site-muted">
+            {activeLength}-letter word · {wordlessConfig.maxGuesses} guesses
+          </p>
+        </div>
+      </div>
+
+      <Board
+        rows={rows}
+        wordLength={activeLength}
+        shakeRow={shakeRow}
+        revealRow={revealRow}
+      />
 
       {finished && (
         <div className="flex flex-col items-center gap-3 text-center">
           {state.status === "won" ? (
-            <p className="text-lg font-semibold text-green-600">
-              You got it in {state.guesses.length}!
+            <p className="text-lg font-semibold text-[var(--tile-correct)]">
+              Nice — {state.guesses.length}/{wordlessConfig.maxGuesses}!
             </p>
           ) : (
-            <p className="text-lg font-semibold">
+            <p className="text-lg text-site-text">
               The word was{" "}
-              <span className="font-bold tracking-widest">{state.answer}</span>
+              <span className="font-bold tracking-widest text-site-accent">
+                {state.answer}
+              </span>
             </p>
           )}
           <button
             type="button"
             onClick={handleShare}
-            className="rounded bg-zinc-900 px-6 py-2 text-sm font-semibold text-white transition hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
+            className="rounded-lg border border-site-border bg-site-surface px-6 py-2.5 text-sm font-semibold text-site-text shadow-sm transition hover:border-site-accent/40 hover:bg-site-accent-soft"
           >
-            {copied ? "Copied!" : "Share"}
+            {copied ? "Copied!" : "Share result"}
           </button>
         </div>
       )}
 
-      <Keyboard
-        keyStates={state.keyStates}
-        onKey={handleKey}
-        disabled={finished}
-      />
+      <div className="w-full">
+        <Keyboard
+          keyStates={state.keyStates}
+          onKey={(key) => void handleKey(key)}
+          disabled={finished || validating}
+        />
+        {validating && (
+          <p className="mt-2 text-center text-xs text-site-muted">
+            Checking dictionary…
+          </p>
+        )}
+      </div>
 
-      <p className="max-w-sm text-center text-xs text-zinc-400">
+      <p className="max-w-md text-center text-xs leading-relaxed text-site-muted">
         {wordlessConfig.footer}
       </p>
 
       <Link
         href="/"
-        className="text-sm font-medium text-zinc-500 underline-offset-4 hover:underline"
+        className="text-sm font-medium text-site-accent underline-offset-4 hover:underline"
       >
         ← All games
       </Link>

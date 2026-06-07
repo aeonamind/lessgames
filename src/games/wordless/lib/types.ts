@@ -16,6 +16,7 @@ export interface GuessRow {
 
 export interface WordlessState {
   gameDay: string;
+  length: number;
   answer: string;
   guesses: GuessRow[];
   currentGuess: string;
@@ -23,8 +24,18 @@ export interface WordlessState {
   keyStates: Record<string, KeyState>;
 }
 
-export interface SavedWordlessGame {
-  gameDay: string;
+export interface SavedPuzzle {
   guesses: string[];
   status: GameStatus;
+}
+
+export interface SavedWordlessSession {
+  gameDay: string;
+  activeLength: number;
+  puzzles: Record<string, SavedPuzzle>;
+}
+
+export interface DailyWordsResponse {
+  gameDay: string;
+  words: Record<number, string>;
 }
