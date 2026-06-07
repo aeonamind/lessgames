@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function SonglessPage() {
   return (
-    <GameShell>
+    <GameShell title={songlessConfig.name}>
       <ComingSoon
         name={songlessConfig.name}
         description={songlessConfig.description}

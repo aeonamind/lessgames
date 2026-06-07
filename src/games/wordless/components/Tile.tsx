@@ -28,18 +28,18 @@ export function TileCell({
 
   const stateClass =
     tile.state === "correct"
-      ? "border-transparent bg-[var(--tile-correct)] text-white"
+      ? "border-transparent bg-[var(--tile-correct)] text-[var(--tile-text-revealed)]"
       : tile.state === "present"
-        ? "border-transparent bg-[var(--tile-present)] text-white"
+        ? "border-transparent bg-[var(--tile-present)] text-[var(--tile-text-revealed)]"
         : tile.state === "absent"
-          ? "border-transparent bg-[var(--tile-absent)] text-white"
+          ? "border-transparent bg-[var(--tile-absent)] text-[var(--tile-text-revealed)]"
           : tile.letter
-            ? "border-[var(--tile-filled-border)] bg-[var(--tile-empty)] text-site-text"
-            : "border-[var(--tile-border)] bg-[var(--tile-empty)] text-site-text";
+            ? "border-[var(--tile-filled-border)] bg-[var(--tile-empty)] text-[var(--tile-text)]"
+            : "border-[var(--tile-border)] bg-[var(--tile-empty)] text-[var(--tile-text)]";
 
   return (
     <div
-      className={`flex items-center justify-center rounded-md border-2 font-bold uppercase select-none transition-colors duration-200 ${tileSizeClass(wordLength)} ${stateClass} ${animate ? "animate-flip" : tile.letter && !isRevealed ? "animate-pop" : ""}`}
+      className={`flex items-center justify-center rounded-sm border-2 font-bold uppercase select-none transition-colors duration-200 ${tileSizeClass(wordLength)} ${stateClass} ${animate ? "animate-flip" : tile.letter && !isRevealed ? "animate-pop" : ""}`}
       style={{ animationDelay: animate ? `${delay}ms` : undefined }}
     >
       {tile.letter}

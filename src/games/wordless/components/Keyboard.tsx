@@ -10,20 +10,20 @@ const ROWS = [
 
 function keyClasses(state: KeyState, isWide: boolean): string {
   const base =
-    "flex h-14 items-center justify-center rounded-md font-semibold uppercase select-none transition-colors duration-150 active:scale-95 disabled:opacity-50";
+    "flex h-[52px] items-center justify-center rounded-md font-semibold uppercase select-none border transition-colors duration-150 active:scale-95 disabled:opacity-50";
 
   const size = isWide
     ? "px-2 text-[10px] sm:px-3 sm:text-xs flex-[1.4]"
-    : "w-8 text-xs sm:w-10 sm:text-sm";
+    : "w-8 text-xs sm:w-9 sm:text-sm";
 
   const tone =
     state === "correct"
-      ? "bg-[var(--tile-correct)] text-white"
+      ? "border-transparent bg-[var(--tile-correct)] text-white"
       : state === "present"
-        ? "bg-[var(--tile-present)] text-white"
+        ? "border-transparent bg-[var(--tile-present)] text-white"
         : state === "absent"
-          ? "bg-[var(--tile-absent)] text-white"
-          : "bg-[#d3d6da] text-site-text hover:bg-[#c9ccd0]";
+          ? "border-transparent bg-[var(--tile-absent)] text-white"
+          : "border-[var(--site-border)] bg-[var(--key-unused)] text-[var(--key-text)] hover:bg-[var(--key-unused-hover)]";
 
   return `${base} ${size} ${tone}`;
 }

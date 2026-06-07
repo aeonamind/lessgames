@@ -16,7 +16,7 @@ export function LengthPicker({
   onSelect,
 }: LengthPickerProps) {
   return (
-    <div className="flex flex-wrap items-center justify-center gap-2">
+    <div className="flex flex-wrap items-center justify-center gap-1.5">
       {lengths.map((length) => {
         const status = puzzles[length].status;
         const isActive = length === activeLength;
@@ -26,20 +26,20 @@ export function LengthPicker({
             key={length}
             type="button"
             onClick={() => onSelect(length)}
-            className={`relative flex h-10 min-w-10 items-center justify-center rounded-lg px-3 text-sm font-semibold transition-all duration-150 ${
+            className={`relative min-w-[2.25rem] rounded-md px-2.5 py-1.5 text-sm font-medium transition ${
               isActive
-                ? "bg-site-accent text-white shadow-sm"
-                : "border border-site-border bg-site-surface text-site-text hover:border-site-accent/50 hover:bg-site-accent-soft"
+                ? "gh-btn-primary"
+                : "gh-btn-default"
             }`}
           >
             {length}
             {status === "won" && (
-              <span className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--tile-correct)] text-[9px] text-white">
+              <span className="absolute -right-1 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[var(--tile-correct)] text-[8px] text-white">
                 ✓
               </span>
             )}
             {status === "lost" && (
-              <span className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--tile-absent)] text-[9px] text-white">
+              <span className="absolute -right-1 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[var(--tile-absent)] text-[8px] text-white">
                 ✕
               </span>
             )}

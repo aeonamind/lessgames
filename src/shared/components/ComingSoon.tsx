@@ -8,21 +8,16 @@ interface ComingSoonProps {
 
 export function ComingSoon({ name, description }: ComingSoonProps) {
   return (
-    <div className="flex w-full max-w-lg flex-col items-center gap-6 px-4 py-12 text-center">
-      <p className="text-xs font-semibold uppercase tracking-[0.3em] text-site-accent">
-        Coming soon
-      </p>
-      <h1 className="text-3xl font-bold tracking-tight text-site-text">
-        {name}
-      </h1>
-      <p className="text-site-muted">{description}</p>
-      <div className="w-full rounded-2xl border border-site-border bg-site-surface px-4 py-3 shadow-sm">
+    <div className="flex w-full max-w-lg flex-col items-center gap-5 px-4 py-10 text-center">
+      <div className="w-full border-b border-site-border pb-4">
+        <h1 className="text-xl font-semibold text-site-text">{name}</h1>
+        <p className="mt-1 text-sm text-site-muted">{description}</p>
+      </div>
+      <span className="gh-label gh-label-neutral">Coming soon</span>
+      <div className="gh-box w-full px-4 py-3">
         <DailyCountdown nextLabel="Next shuffle in" />
       </div>
-      <Link
-        href="/"
-        className="text-sm font-medium text-site-accent underline-offset-4 hover:underline"
-      >
+      <Link href="/" className="text-sm text-site-accent hover:underline">
         ← All games
       </Link>
     </div>

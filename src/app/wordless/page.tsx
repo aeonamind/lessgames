@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function WordlessPage() {
   return (
-    <GameShell>
+    <GameShell title="Wordless">
       <WordlessGameLoader />
     </GameShell>
   );

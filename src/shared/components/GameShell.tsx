@@ -1,11 +1,10 @@
+import { SiteShell } from "./SiteShell";
+
 interface GameShellProps {
   children: React.ReactNode;
+  title?: string;
 }
 
-export function GameShell({ children }: GameShellProps) {
-  return (
-    <div className="site-shell flex min-h-full flex-1 flex-col items-center">
-      {children}
-    </div>
-  );
+export function GameShell({ children, title }: GameShellProps) {
+  return <SiteShell title={title}>{children}</SiteShell>;
 }

@@ -12,7 +12,7 @@ interface BoardProps {
 
 export function Board({ rows, wordLength, shakeRow, revealRow }: BoardProps) {
   return (
-    <div className="flex flex-col gap-1.5 rounded-2xl border border-site-border bg-site-surface p-4 shadow-sm">
+    <div className="gh-box flex flex-col gap-1.5 p-4">
       {rows.map((row, rowIndex) => (
         <div
           key={rowIndex}

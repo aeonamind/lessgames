@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function CluelessPage() {
   return (
-    <GameShell>
+    <GameShell title={cluelessConfig.name}>
       <ComingSoon
         name={cluelessConfig.name}
         description={cluelessConfig.description}

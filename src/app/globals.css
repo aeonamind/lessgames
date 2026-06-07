@@ -1,52 +1,152 @@
 @import "tailwindcss";
 
-:root {
-  --site-bg: #f3f0e8;
-  --site-bg-accent: #e8e4d9;
-  --site-surface: #ffffff;
-  --site-surface-muted: #faf8f4;
-  --site-border: #ddd8cc;
-  --site-text: #1c1917;
-  --site-text-muted: #6b6560;
-  --site-accent: #0f766e;
-  --site-accent-soft: #ccfbf1;
-  --site-accent-hover: #115e59;
+/* GitHub Primer–inspired tokens */
+:root,
+[data-theme="light"] {
+  color-scheme: light;
 
-  --tile-correct: #6aaa64;
-  --tile-present: #c9b458;
-  --tile-absent: #787c7e;
+  --site-canvas: #ffffff;
+  --site-canvas-subtle: #f6f8fa;
+  --site-border: #d0d7de;
+  --site-border-muted: #d8dee4;
+  --site-text: #1f2328;
+  --site-text-muted: #656d76;
+  --site-accent: #0969da;
+  --site-accent-hover: #0550ae;
+  --site-accent-subtle: #ddf4ff;
+  --site-success: #1a7f37;
+  --site-success-emphasis: #2da44e;
+  --site-danger: #cf222e;
+  --site-btn-text: #ffffff;
+
+  --tile-correct: #2da44e;
+  --tile-present: #bf8700;
+  --tile-absent: #656d76;
   --tile-empty: #ffffff;
-  --tile-border: #d3d6da;
-  --tile-filled-border: #878a8c;
+  --tile-border: #d0d7de;
+  --tile-filled-border: #656d76;
+  --tile-text: #1f2328;
+  --tile-text-revealed: #ffffff;
+  --key-unused: #f6f8fa;
+  --key-unused-hover: #eaeef2;
+  --key-text: #1f2328;
 
-  --background: var(--site-bg);
+  --background: var(--site-canvas-subtle);
   --foreground: var(--site-text);
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --site-canvas: #0d1117;
+  --site-canvas-subtle: #010409;
+  --site-border: #30363d;
+  --site-border-muted: #21262d;
+  --site-text: #f0f6fc;
+  --site-text-muted: #9198a1;
+  --site-accent: #4493f8;
+  --site-accent-hover: #388bfd;
+  --site-accent-subtle: #132339;
+  --site-success: #3fb950;
+  --site-success-emphasis: #238636;
+  --site-danger: #f85149;
+  --site-btn-text: #ffffff;
+
+  --tile-correct: #3fb950;
+  --tile-present: #d29922;
+  --tile-absent: #484f58;
+  --tile-empty: #0d1117;
+  --tile-border: #30363d;
+  --tile-filled-border: #9198a1;
+  --tile-text: #f0f6fc;
+  --tile-text-revealed: #ffffff;
+  --key-unused: #21262d;
+  --key-unused-hover: #30363d;
+  --key-text: #f0f6fc;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --color-site-bg: var(--site-bg);
-  --color-site-surface: var(--site-surface);
+  --color-site-canvas: var(--site-canvas);
+  --color-site-canvas-subtle: var(--site-canvas-subtle);
   --color-site-border: var(--site-border);
   --color-site-text: var(--site-text);
   --color-site-muted: var(--site-text-muted);
   --color-site-accent: var(--site-accent);
-  --color-site-accent-soft: var(--site-accent-soft);
+  --color-site-accent-subtle: var(--site-accent-subtle);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
 body {
-  background: var(--site-bg);
+  background: var(--site-canvas-subtle);
   color: var(--site-text);
 }
 
 .site-shell {
-  background:
-    radial-gradient(ellipse at 20% 0%, rgba(15, 118, 110, 0.07), transparent 45%),
-    radial-gradient(ellipse at 80% 100%, rgba(120, 113, 108, 0.06), transparent 40%),
-    var(--site-bg);
+  background: var(--site-canvas-subtle);
+  min-height: 100%;
+}
+
+.gh-header {
+  background: var(--site-canvas);
+  border-bottom: 1px solid var(--site-border);
+}
+
+.gh-box {
+  background: var(--site-canvas);
+  border: 1px solid var(--site-border);
+  border-radius: 6px;
+}
+
+.gh-btn-primary {
+  background: var(--site-success-emphasis);
+  color: var(--site-btn-text);
+  border: 1px solid rgba(27, 31, 35, 0.15);
+  border-radius: 6px;
+  font-weight: 600;
+  transition: background 0.15s;
+}
+
+.gh-btn-primary:hover {
+  background: var(--site-success);
+}
+
+.gh-btn-default {
+  background: var(--site-canvas);
+  color: var(--site-text);
+  border: 1px solid var(--site-border);
+  border-radius: 6px;
+  font-weight: 500;
+  transition: background 0.15s;
+}
+
+.gh-btn-default:hover {
+  background: var(--site-canvas-subtle);
+}
+
+.gh-label {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 7px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+  border-radius: 9999px;
+  border: 1px solid transparent;
+}
+
+.gh-label-open {
+  background: var(--site-accent-subtle);
+  color: var(--site-accent);
+  border-color: color-mix(in srgb, var(--site-accent) 30%, transparent);
+}
+
+.gh-label-neutral {
+  background: var(--site-canvas-subtle);
+  color: var(--site-text-muted);
+  border-color: var(--site-border);
 }
 
 @keyframes pop {

@@ -223,7 +223,7 @@ export function WordlessGame() {
   if (loading) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-4 py-24">
-        <div className="h-9 w-9 animate-spin rounded-full border-2 border-site-border border-t-site-accent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-site-border border-t-site-accent" />
         <p className="text-sm text-site-muted">Loading today&apos;s words…</p>
       </div>
     );
@@ -233,11 +233,7 @@ export function WordlessGame() {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 py-24 text-center">
         <p className="text-site-text">{error ?? "Something went wrong."}</p>
-        <button
-          type="button"
-          onClick={loadDaily}
-          className="rounded-lg bg-site-accent px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-site-accent-hover"
-        >
+        <button type="button" onClick={loadDaily} className="gh-btn-primary px-4 py-2 text-sm">
           Retry
         </button>
       </div>
@@ -252,25 +248,20 @@ export function WordlessGame() {
   ).length;
 
   return (
-    <div className="flex w-full max-w-2xl flex-col items-center gap-6 px-4 py-8">
-      <header className="flex w-full flex-col items-center gap-2 text-center">
-        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-site-accent">
-          Daily puzzles
-        </p>
-        <h1 className="text-4xl font-bold tracking-tight text-site-text sm:text-5xl">
-          Wordless
-        </h1>
-        <p className="text-sm text-site-muted">
+    <div className="flex w-full max-w-2xl flex-col items-center gap-5 px-4 py-6">
+      <header className="w-full border-b border-site-border pb-4 text-center">
+        <h1 className="text-xl font-semibold text-site-text">Wordless</h1>
+        <p className="mt-1 text-sm text-site-muted">
           {completedCount}/{wordlessConfig.dailyLengths.length} solved today
         </p>
         {message && (
-          <div className="mt-2 rounded-lg border border-site-border bg-site-surface px-4 py-2 text-sm font-medium text-site-text shadow-sm">
+          <div className="gh-box mx-auto mt-3 inline-block px-3 py-1.5 text-sm text-site-text">
             {message}
           </div>
         )}
       </header>
 
-      <div className="w-full space-y-4">
+      <div className="w-full space-y-3">
         <LengthPicker
           lengths={wordlessConfig.dailyLengths}
           activeLength={activeLength}
@@ -278,7 +269,7 @@ export function WordlessGame() {
           onSelect={setActiveLength}
         />
 
-        <div className="rounded-2xl border border-site-border bg-site-surface px-4 py-3 shadow-sm">
+        <div className="gh-box px-4 py-3">
           <DailyCountdown nextLabel={wordlessConfig.nextShuffleLabel} />
           <p className="mt-1 text-center text-xs text-site-muted">
             {activeLength}-letter word · {wordlessConfig.maxGuesses} guesses
@@ -296,22 +287,16 @@ export function WordlessGame() {
       {finished && (
         <div className="flex flex-col items-center gap-3 text-center">
           {state.status === "won" ? (
-            <p className="text-lg font-semibold text-[var(--tile-correct)]">
-              Nice — {state.guesses.length}/{wordlessConfig.maxGuesses}!
+            <p className="text-sm font-medium text-[var(--site-success)]">
+              Correct — {state.guesses.length}/{wordlessConfig.maxGuesses}
             </p>
           ) : (
-            <p className="text-lg text-site-text">
+            <p className="text-sm text-site-text">
               The word was{" "}
-              <span className="font-bold tracking-widest text-site-accent">
-                {state.answer}
-              </span>
+              <span className="font-semibold text-site-accent">{state.answer}</span>
             </p>
           )}
-          <button
-            type="button"
-            onClick={handleShare}
-            className="rounded-lg border border-site-border bg-site-surface px-6 py-2.5 text-sm font-semibold text-site-text shadow-sm transition hover:border-site-accent/40 hover:bg-site-accent-soft"
-          >
+          <button type="button" onClick={handleShare} className="gh-btn-default px-4 py-2 text-sm">
             {copied ? "Copied!" : "Share result"}
           </button>
         </div>
@@ -330,14 +315,11 @@ export function WordlessGame() {
         )}
       </div>
 
-      <p className="max-w-md text-center text-xs leading-relaxed text-site-muted">
+      <p className="max-w-md text-center text-xs text-site-muted">
         {wordlessConfig.footer}
       </p>
 
-      <Link
-        href="/"
-        className="text-sm font-medium text-site-accent underline-offset-4 hover:underline"
-      >
+      <Link href="/" className="text-sm text-site-accent hover:underline">
         ← All games
       </Link>
     </div>
