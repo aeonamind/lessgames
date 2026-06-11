@@ -22,9 +22,10 @@ export const GAMES: GameDefinition[] = [
     id: "clueless",
     slug: "clueless",
     name: "Clueless",
-    description: "Solve the daily clue puzzle.",
+    description:
+      "Find today's popular secret word. Guesses ranked by semantic similarity.",
     href: "/clueless",
-    status: "coming_soon",
+    status: "live",
   },
   {
     id: "songless",

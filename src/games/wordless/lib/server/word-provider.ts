@@ -1,10 +1,13 @@
 import { getDailyIndex, getGameDay } from "@/shared/lib/daily";
+import {
+  type DatamuseEntry,
+  hasAllowedPartOfSpeech,
+  parseFrequency,
+} from "@/shared/lib/datamuse";
+import { isSingularWord } from "@/shared/lib/singular-word";
 import { wordlessConfig } from "@/games/wordless/config";
 
-const { dailySalt, minLength, maxLength } = wordlessConfig;
-
-/** Datamuse corpus frequency; filters obscure words like "nek" (0.1). */
-const MIN_WORD_FREQUENCY = 1;
+const { dailySalt, minLength, maxLength, minWordFrequency } = wordlessConfig;
 
 type PoolCache = {
   gameDay: string;
@@ -18,22 +21,17 @@ function isAlphaWord(word: string, length: number): boolean {
   return word.length === length && /^[a-zA-Z]+$/.test(word);
 }
 
-type DatamuseEntry = {
-  word: string;
-  tags?: string[];
-};
-
-function parseFrequency(tags: string[] | undefined): number | null {
-  const tag = tags?.find((entry) => entry.startsWith("f:"));
-  if (!tag) return null;
-  const value = Number(tag.slice(2));
-  return Number.isFinite(value) ? value : null;
+function minFrequencyForLength(length: number): number {
+  if (length <= 3) return Math.min(minWordFrequency, 3);
+  if (length >= 7) return Math.min(minWordFrequency, 3.25);
+  return minWordFrequency;
 }
 
 async function fetchFromDatamuse(length: number): Promise<string[]> {
   const pattern = "?".repeat(length);
+  const freqMin = minFrequencyForLength(length);
   const response = await fetch(
-    `https://api.datamuse.com/words?sp=${pattern}&max=1000&md=f`,
+    `https://api.datamuse.com/words?sp=${pattern}&max=1000&md=fp`,
     { next: { revalidate: 86_400 } },
   );
 
@@ -43,21 +41,41 @@ async function fetchFromDatamuse(length: number): Promise<string[]> {
 
   const data = (await response.json()) as DatamuseEntry[];
   return data
-    .filter((entry) => {
+    .map((entry) => {
       const word = entry.word.trim();
       const frequency = parseFrequency(entry.tags);
-      return (
-        isAlphaWord(word, length) &&
-        frequency !== null &&
-        frequency >= MIN_WORD_FREQUENCY
-      );
+      if (
+        !isAlphaWord(word, length) ||
+        frequency === null ||
+        frequency < freqMin ||
+        !hasAllowedPartOfSpeech(entry.tags)
+      ) {
+        return null;
+      }
+      return { word: word.toUpperCase(), frequency };
     })
-    .map((entry) => entry.word.trim().toUpperCase());
+    .filter((entry): entry is { word: string; frequency: number } => entry !== null)
+    .sort((a, b) => b.frequency - a.frequency || a.word.localeCompare(b.word))
+    .map((entry) => entry.word);
+}
+
+async function filterSingularWords(words: string[]): Promise<string[]> {
+  const kept: string[] = [];
+
+  for (const word of words) {
+    if (await isSingularWord(word, validateEnglishWord)) {
+      kept.push(word);
+    }
+  }
+
+  return kept;
 }
 
 async function buildWordPool(length: number): Promise<string[]> {
   const words = await fetchFromDatamuse(length);
-  return [...new Set(words)].sort();
+  const unique = [...new Set(words)];
+  const singular = await filterSingularWords(unique);
+  return singular.length > 0 ? singular : unique;
 }
 
 export async function getWordPool(
@@ -91,7 +109,10 @@ export async function getDailyWord(
 
   for (let offset = 0; offset < pool.length; offset++) {
     const word = pool[(start + offset) % pool.length];
-    if (await validateEnglishWord(word)) {
+    if (
+      (await validateEnglishWord(word)) &&
+      (await isSingularWord(word, validateEnglishWord))
+    ) {
       return word;
     }
   }
