@@ -1,5 +1,5 @@
 import { cluelessConfig } from "@/games/clueless/config";
-import { validateEnglishWord } from "@/games/wordless/lib/server/word-provider";
+import { validateEnglishWord } from "@/shared/lib/dictionary";
 import { getGameDay } from "@/shared/lib/daily";
 import { getDailyAnswer } from "./puzzle-provider";
 
@@ -19,6 +19,10 @@ type DatamuseEntry = {
   score?: number;
 };
 
+function isValidGuessWord(word: string): boolean {
+  return /^[a-z]+$/.test(word);
+}
+
 async function fetchSimilarWords(target: string): Promise<DatamuseEntry[]> {
   const response = await fetch(
     `https://api.datamuse.com/words?ml=${encodeURIComponent(target)}&max=1000`,
@@ -32,8 +36,45 @@ async function fetchSimilarWords(target: string): Promise<DatamuseEntry[]> {
   return response.json() as Promise<DatamuseEntry[]>;
 }
 
-function isValidGuessWord(word: string): boolean {
-  return /^[a-z]+$/.test(word);
+async function fetchTargetRankInList(
+  url: string,
+  target: string,
+): Promise<number | null> {
+  const response = await fetch(url, { next: { revalidate: 86_400 } });
+  if (!response.ok) return null;
+
+  const data = (await response.json()) as DatamuseEntry[];
+  const index = data.findIndex(
+    (entry) => entry.word.trim().toLowerCase() === target,
+  );
+
+  if (index < 0) return null;
+  return index + 2;
+}
+
+async function fetchReverseDistance(
+  guess: string,
+  target: string,
+): Promise<number | null> {
+  const encodedGuess = encodeURIComponent(guess);
+  const ranks = await Promise.all([
+    fetchTargetRankInList(
+      `https://api.datamuse.com/words?ml=${encodedGuess}&max=1000`,
+      target,
+    ),
+    fetchTargetRankInList(
+      `https://api.datamuse.com/words?rel_syn=${encodedGuess}&max=1000`,
+      target,
+    ),
+    fetchTargetRankInList(
+      `https://api.datamuse.com/words?rel_trg=${encodedGuess}&max=500`,
+      target,
+    ),
+  ]);
+
+  const valid = ranks.filter((rank): rank is number => rank !== null);
+  if (valid.length === 0) return null;
+  return Math.min(...valid);
 }
 
 async function buildRankings(
@@ -89,19 +130,37 @@ export async function getRankings(
   return buildRankings(target, gameDay);
 }
 
-export async function getSemanticDistance(
+async function resolveDistance(
   guess: string,
-  gameDay = getGameDay(),
+  cache: RankingCache,
 ): Promise<number> {
   const normalizedGuess = guess.toLowerCase();
-  const { rankings, target } = await getRankings(gameDay);
+  const { rankings, target, ordered } = cache;
 
   if (normalizedGuess === target) return 1;
 
   const ranked = rankings.get(normalizedGuess);
   if (ranked !== undefined) return ranked;
 
+  const reverse = await fetchReverseDistance(normalizedGuess, target);
+  if (reverse !== null) {
+    rankings.set(normalizedGuess, reverse);
+    ordered.push(normalizedGuess);
+    ordered.sort(
+      (a, b) => (rankings.get(a) ?? maxDistance) - (rankings.get(b) ?? maxDistance),
+    );
+    return reverse;
+  }
+
   return maxDistance;
+}
+
+export async function getSemanticDistance(
+  guess: string,
+  gameDay = getGameDay(),
+): Promise<number> {
+  const cache = await getRankings(gameDay);
+  return resolveDistance(guess, cache);
 }
 
 export async function resolveGuess(
@@ -114,14 +173,14 @@ export async function resolveGuess(
   correct: boolean;
 }> {
   const normalizedGuess = guess.trim().toLowerCase();
-  const { target } = await getRankings(gameDay);
-  const distance = await getSemanticDistance(normalizedGuess, gameDay);
+  const cache = await getRankings(gameDay);
+  const distance = await resolveDistance(normalizedGuess, cache);
 
   return {
     word: normalizedGuess,
     distance,
     isHint: false,
-    correct: normalizedGuess === target,
+    correct: normalizedGuess === cache.target,
   };
 }
 
@@ -137,7 +196,8 @@ export async function resolveHint(
   correct: boolean;
   gaveUp?: boolean;
 }> {
-  const { target, ordered, rankings } = await getRankings(gameDay);
+  const cache = await getRankings(gameDay);
+  const { target, ordered, rankings } = cache;
 
   if (giveUp) {
     return {
@@ -156,7 +216,11 @@ export async function resolveHint(
       : maxDistance;
 
   const candidates = ordered
-    .filter((word) => !guessed.has(word) && (rankings.get(word) ?? maxDistance) < bestDistance)
+    .filter(
+      (word) =>
+        !guessed.has(word) &&
+        (rankings.get(word) ?? maxDistance) < bestDistance,
+    )
     .map((word) => ({ word, distance: rankings.get(word) ?? maxDistance }))
     .sort((a, b) => b.distance - a.distance);
 
@@ -168,19 +232,6 @@ export async function resolveHint(
       isHint: true,
       correct: pick.word === target,
     };
-  }
-
-  for (const word of ordered) {
-    if (guessed.has(word)) continue;
-    const distance = rankings.get(word) ?? maxDistance;
-    if (distance < bestDistance) {
-      return {
-        word,
-        distance,
-        isHint: true,
-        correct: word === target,
-      };
-    }
   }
 
   throw new Error("No hint available");

@@ -11,6 +11,8 @@ export const cluelessConfig = {
   maxAnswerLength: 12,
   /** Min f: tag value (occurrences per million, from md=f) for daily answers. */
   minFrequency: 4,
+  /** Daily answer is picked only from the N most frequent words in the pool. */
+  dailyAnswerTierSize: 120,
   maxDistance: 3000,
   shareTitle: "Clueless",
   nextShuffleLabel: "Next shuffle in",
@@ -21,6 +23,7 @@ export const cluelessConfig = {
   minAnswerLength: number;
   maxAnswerLength: number;
   minFrequency: number;
+  dailyAnswerTierSize: number;
   maxDistance: number;
   shareTitle: string;
   nextShuffleLabel: string;

@@ -1,5 +1,4 @@
 import { cluelessConfig } from "@/games/clueless/config";
-import { validateEnglishWord } from "@/games/wordless/lib/server/word-provider";
 import {
   type DatamuseEntry,
   hasAllowedPartOfSpeech,
@@ -7,7 +6,7 @@ import {
   parseFrequency,
 } from "@/shared/lib/datamuse";
 import { getGameDay } from "@/shared/lib/daily";
-import { isSingularWord } from "@/shared/lib/singular-word";
+import { excludePoolPlurals } from "@/shared/lib/singular-word";
 
 const { minAnswerLength, maxAnswerLength, minFrequency } = cluelessConfig;
 
@@ -66,14 +65,7 @@ async function buildPopularWordPool(): Promise<string[]> {
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
     .map(([word]) => word);
 
-  const singular: string[] = [];
-  for (const word of ranked) {
-    if (await isSingularWord(word, validateEnglishWord)) {
-      singular.push(word);
-    }
-  }
-
-  return singular.length > 0 ? singular : ranked;
+  return excludePoolPlurals(ranked);
 }
 
 export async function getPopularWordPool(

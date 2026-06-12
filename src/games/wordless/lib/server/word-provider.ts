@@ -4,7 +4,11 @@ import {
   hasAllowedPartOfSpeech,
   parseFrequency,
 } from "@/shared/lib/datamuse";
-import { isSingularWord } from "@/shared/lib/singular-word";
+import { validateEnglishWord } from "@/shared/lib/dictionary";
+import {
+  excludePoolPlurals,
+  isSingularWord,
+} from "@/shared/lib/singular-word";
 import { wordlessConfig } from "@/games/wordless/config";
 
 const { dailySalt, minLength, maxLength, minWordFrequency } = wordlessConfig;
@@ -15,7 +19,6 @@ type PoolCache = {
 };
 
 const poolCache = new Map<number, PoolCache>();
-const validationCache = new Map<string, boolean>();
 
 function isAlphaWord(word: string, length: number): boolean {
   return word.length === length && /^[a-zA-Z]+$/.test(word);
@@ -59,23 +62,12 @@ async function fetchFromDatamuse(length: number): Promise<string[]> {
     .map((entry) => entry.word);
 }
 
-async function filterSingularWords(words: string[]): Promise<string[]> {
-  const kept: string[] = [];
-
-  for (const word of words) {
-    if (await isSingularWord(word, validateEnglishWord)) {
-      kept.push(word);
-    }
-  }
-
-  return kept;
-}
-
 async function buildWordPool(length: number): Promise<string[]> {
-  const words = await fetchFromDatamuse(length);
-  const unique = [...new Set(words)];
-  const singular = await filterSingularWords(unique);
-  return singular.length > 0 ? singular : unique;
+  const words = excludePoolPlurals([...new Set(await fetchFromDatamuse(length))]);
+  if (words.length === 0) {
+    throw new Error(`No words found for length ${length}`);
+  }
+  return words;
 }
 
 export async function getWordPool(
@@ -92,10 +84,6 @@ export async function getWordPool(
   }
 
   const words = await buildWordPool(length);
-  if (words.length === 0) {
-    throw new Error(`No words found for length ${length}`);
-  }
-
   poolCache.set(length, { gameDay, words });
   return words;
 }
@@ -109,10 +97,8 @@ export async function getDailyWord(
 
   for (let offset = 0; offset < pool.length; offset++) {
     const word = pool[(start + offset) % pool.length];
-    if (
-      (await validateEnglishWord(word)) &&
-      (await isSingularWord(word, validateEnglishWord))
-    ) {
+    if (!(await isSingularWord(word, validateEnglishWord))) continue;
+    if (await validateEnglishWord(word)) {
       return word;
     }
   }
@@ -122,41 +108,17 @@ export async function getDailyWord(
 
 export async function getDailyWords(gameDay = getGameDay()) {
   const lengths = wordlessConfig.dailyLengths;
-  const entries = await Promise.all(
-    lengths.map(async (length) => {
-      const word = await getDailyWord(length, gameDay);
-      return [length, word] as const;
-    }),
-  );
+  const words: Record<number, string> = {};
 
-  return {
-    gameDay,
-    words: Object.fromEntries(entries) as Record<number, string>,
-  };
-}
-
-export async function validateEnglishWord(word: string): Promise<boolean> {
-  const normalized = word.trim().toLowerCase();
-  if (!/^[a-z]+$/.test(normalized)) {
-    return false;
+  for (const length of lengths) {
+    words[length] = await getDailyWord(length, gameDay);
   }
 
-  const cached = validationCache.get(normalized);
-  if (cached !== undefined) {
-    return cached;
-  }
-
-  const response = await fetch(
-    `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(normalized)}`,
-    { next: { revalidate: 604_800 } },
-  );
-
-  const valid = response.ok;
-  validationCache.set(normalized, valid);
-  return valid;
+  return { gameDay, words };
 }
+
+export { validateEnglishWord } from "@/shared/lib/dictionary";
 
 export function clearWordCaches(): void {
   poolCache.clear();
-  validationCache.clear();
 }

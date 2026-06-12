@@ -28,6 +28,16 @@ export function singularCandidates(word: string): string[] {
   );
 }
 
+/** Drop plurals when their singular form is also in the same pool (no API calls). */
+export function excludePoolPlurals(words: string[]): string[] {
+  const lower = new Set(words.map((word) => word.toLowerCase()));
+
+  return words.filter((word) => {
+    if (!hasPluralSurfaceForm(word)) return true;
+    return !singularCandidates(word).some((candidate) => lower.has(candidate));
+  });
+}
+
 /** True when the word is not an obvious plural of another valid English word. */
 export async function isSingularWord(
   word: string,
