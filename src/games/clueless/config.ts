@@ -13,7 +13,8 @@ export const cluelessConfig = {
   minFrequency: 4,
   /** Daily answer is picked only from the N most frequent words in the pool. */
   dailyAnswerTierSize: 120,
-  maxDistance: 3000,
+  /** Progress bar width caps here; actual ranks can be much higher. */
+  progressBarCap: 3000,
   shareTitle: "Clueless",
   nextShuffleLabel: "Next shuffle in",
   footer:
@@ -24,7 +25,7 @@ export const cluelessConfig = {
   maxAnswerLength: number;
   minFrequency: number;
   dailyAnswerTierSize: number;
-  maxDistance: number;
+  progressBarCap: number;
   shareTitle: string;
   nextShuffleLabel: string;
   footer: string;

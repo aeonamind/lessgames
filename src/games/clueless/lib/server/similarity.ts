@@ -1,80 +1,25 @@
-import { cluelessConfig } from "@/games/clueless/config";
 import { validateEnglishWord } from "@/shared/lib/dictionary";
 import { getGameDay } from "@/shared/lib/daily";
+import {
+  cosineSimilarity,
+  getVector,
+  hasEmbedding,
+  loadEmbeddings,
+} from "./embeddings";
 import { getDailyAnswer } from "./puzzle-provider";
-
-const { maxDistance } = cluelessConfig;
 
 type RankingCache = {
   gameDay: string;
   target: string;
   rankings: Map<string, number>;
   ordered: string[];
+  vocabSize: number;
 };
 
 const rankingCache = new Map<string, RankingCache>();
 
-type DatamuseEntry = {
-  word: string;
-  score?: number;
-};
-
 function isValidGuessWord(word: string): boolean {
   return /^[a-z]+$/.test(word);
-}
-
-async function fetchSimilarWords(target: string): Promise<DatamuseEntry[]> {
-  const response = await fetch(
-    `https://api.datamuse.com/words?ml=${encodeURIComponent(target)}&max=1000`,
-    { next: { revalidate: 86_400 } },
-  );
-
-  if (!response.ok) {
-    throw new Error(`Datamuse request failed (${response.status})`);
-  }
-
-  return response.json() as Promise<DatamuseEntry[]>;
-}
-
-async function fetchTargetRankInList(
-  url: string,
-  target: string,
-): Promise<number | null> {
-  const response = await fetch(url, { next: { revalidate: 86_400 } });
-  if (!response.ok) return null;
-
-  const data = (await response.json()) as DatamuseEntry[];
-  const index = data.findIndex(
-    (entry) => entry.word.trim().toLowerCase() === target,
-  );
-
-  if (index < 0) return null;
-  return index + 2;
-}
-
-async function fetchReverseDistance(
-  guess: string,
-  target: string,
-): Promise<number | null> {
-  const encodedGuess = encodeURIComponent(guess);
-  const ranks = await Promise.all([
-    fetchTargetRankInList(
-      `https://api.datamuse.com/words?ml=${encodedGuess}&max=1000`,
-      target,
-    ),
-    fetchTargetRankInList(
-      `https://api.datamuse.com/words?rel_syn=${encodedGuess}&max=1000`,
-      target,
-    ),
-    fetchTargetRankInList(
-      `https://api.datamuse.com/words?rel_trg=${encodedGuess}&max=500`,
-      target,
-    ),
-  ]);
-
-  const valid = ranks.filter((rank): rank is number => rank !== null);
-  if (valid.length === 0) return null;
-  return Math.min(...valid);
 }
 
 async function buildRankings(
@@ -82,40 +27,42 @@ async function buildRankings(
   gameDay: string,
 ): Promise<RankingCache> {
   const normalizedTarget = target.toLowerCase();
+  const store = await loadEmbeddings();
+  const targetVector = getVector(normalizedTarget, store);
+
+  if (!targetVector) {
+    throw new Error(`Daily answer is missing from embedding vocabulary: ${target}`);
+  }
+
+  const scored = store.words.map((word) => ({
+    word,
+    similarity:
+      word === normalizedTarget
+        ? Number.POSITIVE_INFINITY
+        : cosineSimilarity(targetVector, getVector(word, store)!),
+  }));
+
+  scored.sort(
+    (a, b) =>
+      b.similarity - a.similarity || a.word.localeCompare(b.word),
+  );
+
   const rankings = new Map<string, number>();
   const ordered: string[] = [];
 
-  rankings.set(normalizedTarget, 1);
-  ordered.push(normalizedTarget);
-
-  const similar = await fetchSimilarWords(normalizedTarget);
-  let distance = 2;
-
-  for (const entry of similar) {
-    const word = entry.word.trim().toLowerCase();
-    if (!isValidGuessWord(word) || rankings.has(word)) continue;
-    rankings.set(word, distance);
+  for (let i = 0; i < scored.length; i++) {
+    const word = scored[i]!.word;
+    rankings.set(word, i + 1);
     ordered.push(word);
-    distance++;
   }
 
-  const reverse = await fetch(
-    `https://api.datamuse.com/words?rel_trg=${encodeURIComponent(normalizedTarget)}&max=500`,
-    { next: { revalidate: 86_400 } },
-  );
-
-  if (reverse.ok) {
-    const triggers = (await reverse.json()) as DatamuseEntry[];
-    for (const entry of triggers) {
-      const word = entry.word.trim().toLowerCase();
-      if (!isValidGuessWord(word) || rankings.has(word)) continue;
-      rankings.set(word, distance);
-      ordered.push(word);
-      distance++;
-    }
-  }
-
-  const cache: RankingCache = { gameDay, target: normalizedTarget, rankings, ordered };
+  const cache: RankingCache = {
+    gameDay,
+    target: normalizedTarget,
+    rankings,
+    ordered,
+    vocabSize: scored.length,
+  };
   rankingCache.set(gameDay, cache);
   return cache;
 }
@@ -130,29 +77,13 @@ export async function getRankings(
   return buildRankings(target, gameDay);
 }
 
-async function resolveDistance(
-  guess: string,
-  cache: RankingCache,
-): Promise<number> {
+function resolveDistance(guess: string, cache: RankingCache): number {
   const normalizedGuess = guess.toLowerCase();
-  const { rankings, target, ordered } = cache;
-
-  if (normalizedGuess === target) return 1;
-
-  const ranked = rankings.get(normalizedGuess);
-  if (ranked !== undefined) return ranked;
-
-  const reverse = await fetchReverseDistance(normalizedGuess, target);
-  if (reverse !== null) {
-    rankings.set(normalizedGuess, reverse);
-    ordered.push(normalizedGuess);
-    ordered.sort(
-      (a, b) => (rankings.get(a) ?? maxDistance) - (rankings.get(b) ?? maxDistance),
-    );
-    return reverse;
+  const ranked = cache.rankings.get(normalizedGuess);
+  if (ranked === undefined) {
+    throw new Error("WORD_NOT_IN_VOCAB");
   }
-
-  return maxDistance;
+  return ranked;
 }
 
 export async function getSemanticDistance(
@@ -174,7 +105,7 @@ export async function resolveGuess(
 }> {
   const normalizedGuess = guess.trim().toLowerCase();
   const cache = await getRankings(gameDay);
-  const distance = await resolveDistance(normalizedGuess, cache);
+  const distance = resolveDistance(normalizedGuess, cache);
 
   return {
     word: normalizedGuess,
@@ -197,7 +128,7 @@ export async function resolveHint(
   gaveUp?: boolean;
 }> {
   const cache = await getRankings(gameDay);
-  const { target, ordered, rankings } = cache;
+  const { target, ordered, rankings, vocabSize } = cache;
 
   if (giveUp) {
     return {
@@ -213,15 +144,15 @@ export async function resolveHint(
   const bestDistance =
     guessedDistances.length > 0
       ? Math.min(...guessedDistances)
-      : maxDistance;
+      : vocabSize + 1;
 
   const candidates = ordered
     .filter(
       (word) =>
         !guessed.has(word) &&
-        (rankings.get(word) ?? maxDistance) < bestDistance,
+        (rankings.get(word) ?? vocabSize + 1) < bestDistance,
     )
-    .map((word) => ({ word, distance: rankings.get(word) ?? maxDistance }))
+    .map((word) => ({ word, distance: rankings.get(word) ?? vocabSize + 1 }))
     .sort((a, b) => b.distance - a.distance);
 
   if (candidates.length > 0) {
@@ -241,6 +172,11 @@ export async function assertKnownWord(word: string): Promise<void> {
   const normalized = word.trim().toLowerCase();
   if (!isValidGuessWord(normalized)) {
     throw new Error("WORD_INVALID");
+  }
+
+  const store = await loadEmbeddings();
+  if (!hasEmbedding(normalized, store)) {
+    throw new Error("WORD_NOT_FOUND");
   }
 
   const valid = await validateEnglishWord(normalized);

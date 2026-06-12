@@ -5,7 +5,9 @@
   "packageManager": "bun@1.3.14",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build:embeddings": "bun scripts/build-clueless-embeddings.ts",
+    "build:app": "next build",
+    "build": "bun run build:embeddings && bun run build:app",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit"

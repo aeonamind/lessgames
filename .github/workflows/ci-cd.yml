@@ -18,6 +18,15 @@ jobs:
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
+      - name: Restore Clueless embeddings cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            src/games/clueless/data/embeddings.bin
+            .cache/glove.6B.zip
+          key: clueless-embeddings-v1-${{ hashFiles('scripts/build-clueless-embeddings.ts') }}
+          restore-keys: |
+            clueless-embeddings-v1-
       - name: Install dependencies
         run: bun install --frozen-lockfile
       - name: Lint
@@ -36,6 +45,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Restore Clueless embeddings cache
+        id: embeddings-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            src/games/clueless/data/embeddings.bin
+            .cache/glove.6B.zip
+          key: clueless-embeddings-v1-${{ hashFiles('scripts/build-clueless-embeddings.ts') }}
+          restore-keys: |
+            clueless-embeddings-v1-
+
       - name: Login to DockerHub
         run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
@@ -45,6 +65,14 @@ jobs:
             -t aeonamind/lessgames:${{ github.sha }} \
             -t aeonamind/lessgames:latest \
             .
+
+      - name: Seed embeddings cache from image
+        if: steps.embeddings-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p src/games/clueless/data
+          id=$(docker create aeonamind/lessgames:${{ github.sha }})
+          docker cp "$id:/app/src/games/clueless/data/embeddings.bin" src/games/clueless/data/embeddings.bin
+          docker rm "$id"
 
       - name: Push to DockerHub
         run: |

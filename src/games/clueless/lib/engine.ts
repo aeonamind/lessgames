@@ -5,7 +5,7 @@ import type {
   SavedCluelessSession,
 } from "@/games/clueless/lib/types";
 
-const { maxDistance } = cluelessConfig;
+const { progressBarCap } = cluelessConfig;
 
 const BLOCKED_PREFIXES = [
   "rape",
@@ -161,8 +161,11 @@ export function applyGuessResult(
 
 /** Progress bar width (0–100) from semantic distance */
 export function distanceToProgress(distance: number): number {
-  if (distance > maxDistance) return 1;
-  const ratio = Math.max(0, Math.min(1, (maxDistance - distance) / maxDistance));
+  if (distance > progressBarCap) return 1;
+  const ratio = Math.max(
+    0,
+    Math.min(1, (progressBarCap - distance) / progressBarCap),
+  );
   return 1 + 99 * Math.pow(ratio, 3.5);
 }
 
